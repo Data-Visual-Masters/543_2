@@ -96,7 +96,7 @@ crime[6739,'DaysToReport']=difftime(crime[6739,'Reported.Date'],
 With the data as is, you can request a bar plot:
 
 ```{r, eval=TRUE}
-# how many crimes are occurring per day since...?
+# how many crimes are occurring per day 
 library(ggplot2)
 base=ggplot(crime,aes(x = floor_date(Occurred.Date, "day")))
 barT1= base + geom_bar() 
@@ -105,6 +105,7 @@ barT1
 
 A particular period:
 ```{r, eval=TRUE}
+# just changing view, not the data
 Start=as.Date('2010-1-1')
 End=as.Date('2010-12-31')
 barT1 + scale_x_date(limits = c(Start,End)) 
@@ -114,6 +115,8 @@ A particular crime
 
 ```{r, eval=TRUE}
 # A particular crime: theft
+# all data was filtered
+# some is viewed
 
 base=ggplot(crime[crime$crimecat=="THEFT",],
             aes(x = floor_date(Occurred.Date, "day")))
@@ -142,7 +145,7 @@ barT3=base + geom_bar(na.rm = T)
 barT3 + facet_wrap(~crimecat)
 ```
 
-We could re organize the previous plot but we lack some information. Let me create a frequency table:
+We could re organize the previous plot so that we highlight the most and least common crimes along that time period. However, as you have seen, we have not created a frequency table of dates, we have just used lubridate's _floor_date_.   Then, let me create a frequency table:
 ```{r, eval=TRUE}
 crimeDate=as.data.frame(table(crime$Occurred.Date,crime$crimecat))
 names(crimeDate)=c("date",'crime','count')
@@ -152,11 +155,13 @@ crimeDate$date=as.Date(crimeDate$date)
 head(crimeDate,15)
 ```
 
+Now, we can use the _count_ column in our new _crimeDate_ data frame:
+
 ```{r, eval=TRUE}
 base=ggplot(crimeDate[crimeDate$date>'2014-12-31',], # filter
             aes(x=date,y=count))
 barT4=base + geom_bar(stat = 'identity') 
-barT4 + facet_wrap(~reorder(crime,-count))
+barT4 + facet_wrap(~reorder(crime,-count)) # descending
 ```
 
 It is pretty common the use of lines. Let me prepare a line plot for all the data:
@@ -272,7 +277,7 @@ boxByYear
 ```
 
 
-Remember that although the boxplot is very informative, you could only show familiar  statistics :
+Remember that although the boxplot is very informative, it is advisable to  try familiar  statistics :
 
 
 ```{r, eval=TRUE}
@@ -339,6 +344,7 @@ num_num=merge(daysByNeigh,crimesByNeigh) # 'Neighborhood' is the "key"
 #check after merge:
 str(num_num)
 ```
+Let's turn the _Neighborhood_ into characters:
 ```{r, eval=TRUE}
 num_num$Neighborhood=as.character(num_num$Neighborhood)
 ```
@@ -353,26 +359,35 @@ plot1= base +  geom_point()
 plot1
 ```
 
-We can improve the plot, this time introducing **ggrepel**:
+If you compute the Pearson correlation coefficient, you may not find a relevant correlation interesting:
+```{r, eval=TRUE}
+cor.test(num_num$DaysToReport,num_num$CrimeShare,method = "pearson")
+```
+
+However, you can visually find something relevant. Let's use **ggrepel** to show labels:
 
 ```{r ggscatter, eval=TRUE}
 library(ggrepel)
-plot1 + geom_text_repel(aes(label=Neighborhood),size=3)
+plot1 + geom_text_repel(aes(label=Neighborhood),size=2)
 ```
 
-We can limit the labels, annotating the ones that represent at least 5% of the crimes in the city:
+Now we can limit the labels, annotating the ones that represent at least 5% of the crimes in the city:
 
 ```{r, eval=TRUE}
-plot1 + geom_text_repel(aes(label=ifelse(CrimeShare>=5 | DaysToReport>10,
-                                         Neighborhood, "")))
+plot1 + geom_text_repel(aes(label=ifelse(CrimeShare>=5,Neighborhood, "")))
+```
+
+Or the ones that take longer than a week to report:
+
+```{r, eval=TRUE}
+plot1 + geom_text_repel(aes(label=ifelse(DaysToReport>7,Neighborhood, "")))
 ```
 
 
-
-An alternative, to highlight overlaping of points:
+Besides conditionally annotating the places, you can identify the area where of the most salient behavior. Let's highlight overlaping of points:
 ```{r hexbins, eval=TRUE}
 scatp1 = base +  geom_hex(bins = 10)
-scatp2= scatp1 + geom_text_repel(aes(label=ifelse(CrimeShare>=5 | DaysToReport>10, Neighborhood, "")))
+scatp2= scatp1 + geom_text_repel(aes(label=ifelse(CrimeShare>=5, Neighborhood, "")))
 scatp2 + scale_fill_distiller(palette ="Greys",direction=1) # try -1
 ```
 
@@ -382,17 +397,26 @@ The palettes can be selected from the [brewer colors website](http://colorbrewer
 base = ggplot(num_num, aes(x=DaysToReport,y=CrimeShare)) 
 scatp1 = base +  stat_density_2d(aes(fill = ..density..), 
                                  geom = "raster", contour = FALSE)
-scatp2=scatp1 + geom_text_repel(aes(label=ifelse(CrimeShare>=5 | DaysToReport>10,
+scatp2=scatp1 + geom_text_repel(aes(label=ifelse(CrimeShare>=5,
                                          Neighborhood, "")))
 scatp3 = scatp2 +  theme(legend.position='none') 
 scatp4= scatp3 + scale_fill_distiller(palette="Greys", direction=1) 
-scatp4
+scatp4 
 ```
 
 The extra space you see can dissappear using:
 
 ```{r, eval=TRUE}
-scatp5 = scatp4 +  scale_x_continuous(expand = c(0, 0)) + 
-         scale_y_continuous(expand = c(0, 0)) 
+scatp5 = scatp4 +  scale_x_continuous(breaks = c(1:20),expand = c(0, 0)) + 
+         scale_y_continuous(breaks = c(1:10),expand = c(0, 0)) 
 scatp5
 ```
+
+Now you have an approximate of the places representing the most common behavior:
+
+```{r, eval=TRUE}
+base = ggplot(num_num, aes(x=DaysToReport,y=CrimeShare)) 
+plot1= base +  geom_point() + xlim(c(2,5))+ ylim(c(0,3))
+plot1 + geom_text_repel(aes(label=Neighborhood),size=2)
+```
+

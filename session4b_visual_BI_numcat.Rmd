@@ -294,16 +294,7 @@ MxMnMDs= MxMnMDs + scale_colour_manual(values=myFunCols,
                                        name="My Stats") 
 MxMnMDs
 ```
-Connecting the dots (using **group** in **aes**):
 
-```{r, eval=FALSE}
-MxMnMDsL=MxMnMDs+ geom_line(stat="summary",fun='max',
-                            aes(group=1,color="Max"))
-MxMnMDsL=MxMnMDsL+ geom_line(stat="summary",fun='min',
-                            aes(group=1,color="Min"))
-MxMnMDsL=MxMnMDsL+ geom_line(stat="summary",fun='median',
-                            aes(group=1,color="Median")) 
-MxMnMDsL
-```
+You can connect the dots as a visual aid, but I will reserve that for the plot using numerica data on the horizontal axis.
 
 
