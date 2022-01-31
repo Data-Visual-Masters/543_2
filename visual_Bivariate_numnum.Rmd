@@ -12,11 +12,10 @@
 _____
 
 
-# Session 4- part C: 
-# Tabular data - Bivariate relationships: Numerical-Numerical
+# Tabular data - Bivariate relationships III: Numerical-Numerical
 
 
-As always we collect...
+Let's keep using the same data on crimes in Seattle:
 
 ```{r collect, eval=TRUE}
 # collecting the data
@@ -41,7 +40,9 @@ Let's use:
 * "crimecat"                    
 * "Neighborhood"   
 
+
 ```{r, eval=TRUE}
+# just keeping the above vars:
 varsProject=c("Occurred.Date","year", "month", "weekday", "Reported.Date" , "DaysToReport","crimecat","Neighborhood")
 crime=crime[,varsProject]
 crime=crime[complete.cases(crime),]
@@ -50,14 +51,11 @@ row.names(crime)=NULL
 
 ## Numeric-Time data
 
-Time belongs to the interval scale. The zero does not mean absence of time, and the multiplicative interpretations do not make sense: 4 pm is not twice 2 pm. 
+Time belongs to the interval scale. The zero does not mean absence of time, and the multiplicative interpretations do not make sense (4 pm is not twice 2 pm). I have a date variable in this data set:
 
-I have a date variable in this data set:
 ```{r, eval=TRUE}
 summary(crime$Occurred.Date)
 ```
-
-
 
 
 This time, I will change the information for the *DUI* from 1908, and modified other cells as needed. First let me find out the location of that row:
@@ -65,7 +63,8 @@ This time, I will change the information for the *DUI* from 1908, and modified o
 ```{r, eval=TRUE}
 crime[which.min(crime$Occurred.Date),]
 ```
-Then,
+
+Then, I make the more likely real values:
 
 ```{r, eval=TRUE}
 # change Date (keep format):
@@ -92,107 +91,61 @@ crime[6739,'DaysToReport']=difftime(crime[6739,'Reported.Date'],
                                     units = "days")%>%as.numeric()
 ```
 
-
-With the data as is, you can request a bar plot:
+So far, we have always prepared a frequency table when we need to plot bars. But it is also possible to request a bar plot without doing that:
 
 ```{r, eval=TRUE}
 # how many crimes are occurring per day 
 library(ggplot2)
 base=ggplot(crime,aes(x = floor_date(Occurred.Date, "day")))
-barT1= base + geom_bar() 
-barT1
+bars= base + geom_bar() 
+bars
 ```
 
-A particular period:
+However, It is pretty common the use of lines. Let me prepare a line plot from our data:
+
 ```{r, eval=TRUE}
-# just changing view, not the data
-Start=as.Date('2010-1-1')
-End=as.Date('2010-12-31')
-barT1 + scale_x_date(limits = c(Start,End)) 
+crimeDate=as.data.frame(table(crime$Occurred.Date))  # date will be a factor
+head(crimeDate,10)
 ```
 
-A particular crime
+Let's change the factor to date:
 
 ```{r, eval=TRUE}
-# A particular crime: theft
-# all data was filtered
-# some is viewed
-
-base=ggplot(crime[crime$crimecat=="THEFT",],
-            aes(x = floor_date(Occurred.Date, "day")))
-barT2=base + geom_bar() 
-barT2 + scale_x_date(limits = c(Start,End))
-
-```
-
-I could make a better horizontal axis:
-
-```{r, eval=TRUE}
-library(scales) #for "date_format"
-# x axis formatting
-barT2 + scale_x_date(limits = c(Start,End),
-                    labels = date_format("%b"),
-                    date_breaks = "1 month") 
-```
-
-We can use facets:
-
-```{r, eval=TRUE}
-# filtering and faceting
-base=ggplot(data=crime[crime$year>2014,], # filter
-            aes(x=Occurred.Date))
-barT3=base + geom_bar(na.rm = T) 
-barT3 + facet_wrap(~crimecat)
-```
-
-We could re organize the previous plot so that we highlight the most and least common crimes along that time period. However, as you have seen, we have not created a frequency table of dates, we have just used lubridate's _floor_date_.   Then, let me create a frequency table:
-```{r, eval=TRUE}
-crimeDate=as.data.frame(table(crime$Occurred.Date,crime$crimecat))
-names(crimeDate)=c("date",'crime','count')
+names(crimeDate)=c("date",'count')
 #formatting column in Freq Table:
 crimeDate$date=as.Date(crimeDate$date)
-#you have
-head(crimeDate,15)
+
 ```
 
-Now, we can use the _count_ column in our new _crimeDate_ data frame:
+So now you have:
 
 ```{r, eval=TRUE}
-base=ggplot(crimeDate[crimeDate$date>'2014-12-31',], # filter
-            aes(x=date,y=count))
-barT4=base + geom_bar(stat = 'identity') 
-barT4 + facet_wrap(~reorder(crime,-count)) # descending
+head(crimeDate)
 ```
 
-It is pretty common the use of lines. Let me prepare a line plot for all the data:
+Let's get our lines:
 
 ```{r, eval=TRUE}
-crimeDate2=as.data.frame(table(crime$Occurred.Date))
-names(crimeDate2)=c("date",'count')
-#formatting column in Freq Table:
-crimeDate2$date=as.Date(crimeDate2$date)
-```
-
-```{r, eval=TRUE}
-base=ggplot(crimeDate2,
+base=ggplot(crimeDate,
             aes(x=date,y=count))
 base  + geom_line(alpha=0.3) 
 ```
 
-Now for a subset:
+Let's keep the data since 2010:
 
 ```{r, eval=TRUE}
 
-base=ggplot(crimeDate2[crimeDate2$date>as.Date("2010/1/1"),],
-            aes(x=floor_date(date, "week"),y=count))
+base=ggplot(crimeDate[crimeDate$date>as.Date("2010-1-1"),],
+            aes(x=date,y=count))
 base  + geom_line(alpha=0.3) 
 ```
+
 
 The same, but changing limits of x-axis instead of subsetting:
 ```{r, eval=TRUE}
-min <- as.Date("2010/1/1")
+min <- as.Date("2010-1-1")
 max <- NA
-base=ggplot(crimeDate2,
+base=ggplot(crimeDate,
             aes(x=date,y=count))
 base  + geom_line(alpha=0.3) + scale_x_date(limits = c(min, max)) 
 ```
@@ -200,7 +153,40 @@ base  + geom_line(alpha=0.3) + scale_x_date(limits = c(min, max))
 Counting per month:
 
 ```{r, eval=TRUE}
-min <- as.Date("2010/1/1")
+min <- as.Date("2010-1-1")
+max <- NA
+base=ggplot(crimeDate,
+            aes(x=floor_date(date, "month"),
+                y=count))
+monthly= base  + geom_line(alpha=0.3) 
+monthly= monthly + scale_x_date(limits = c(min, max))
+
+# adding a trend:
+monthly = monthly + stat_smooth(color = "red",
+                      fill = "yellow",
+                      method = "loess")
+monthly
+```
+
+What about faceting by crime? However, our crimeDate data frame does not have that information. Let's redo it:
+
+```{r, eval=TRUE}
+crimeDate2=as.data.frame(table(crime$Occurred.Date,crime$crimecat))  # date will be a factor
+head(crimeDate2,10)
+```
+
+Let's reformat crimeDate:
+
+```{r, eval=TRUE}
+names(crimeDate2)=c("date","crime",'count')
+#formatting column in Freq Table:
+crimeDate2$date=as.Date(crimeDate2$date)
+
+```
+
+
+```{r, eval=TRUE}
+min <- as.Date("2010-1-1")
 max <- NA
 base=ggplot(crimeDate2,
             aes(x=floor_date(date, "month"),
@@ -209,23 +195,64 @@ monthly= base  + geom_line(alpha=0.3)
 monthly= monthly + scale_x_date(limits = c(min, max))
 
 # adding a trend:
-monthly + stat_smooth(color = "red",
+monthly = monthly + stat_smooth(color = "red",
                       fill = "yellow",
                       method = "loess")
+monthly + facet_wrap(~crime)
 ```
-Let me add column with year to the frequency table *crimeDate2*:
+
+Alternatively,
 
 ```{r, eval=TRUE}
-crimeDate2$year=year(crimeDate2$date)
+monthly + facet_wrap(~reorder(crime,-count))
+```
+
+We just reorganized the previous plot so that we highlight the most and least common crimes along that time period.
+
+So far, lines have been used to report counts of the crimes. We can also analyze the distribution of the counts using histograms. I mean:
+
+```{r, eval=TRUE}
+crime2010since=crime[crime$Occurred.Date>"2010-1-1",]
+crimeTotalCountsDay=as.data.frame(table(crime2010since$Occurred.Date))
+crimeTotalCountsDay$Var1=as.Date(crimeTotalCountsDay$Var1)
+names(crimeTotalCountsDay)=c('date','counts')
+ggplot(data=crimeTotalCountsDay, aes(x=counts)) + geom_histogram() + xlab("crime per day")
+```
+
+The plot above shows a distribution of crimes per day since 2010. Check this summary:
+```{r, eval=TRUE}
+summary(crimeTotalCountsDay$counts)
+```
+This is telling that you had a day when there were 196 crimes:
+```{r, eval=TRUE}
+# checking the original data:
+sort(table(crime2010since$Occurred.Date),decreasing = T)[1:3]
+```
+```{r, eval=TRUE}
+# checking the  data frame:
+crimeTotalCountsDay[which.max(crimeTotalCountsDay$counts),]
+```
+
+From the summary you also know that since 2010, you can expect at least 43 crimes per day, or that the mean number of crimes per day is 126. Let's see a distribution per year:
+
+```{r, eval=TRUE}
+tapply(crimeTotalCountsDay$counts,
+       year(crimeTotalCountsDay$date), FUN=summary)
+```
+
+If you need to plot this information, we need to add the column with year to the frequency table *crimeTotalCountsDay*:
+
+```{r, eval=TRUE}
+crimeTotalCountsDay$year=year(crimeTotalCountsDay$date)
 #you have
-head(crimeDate2,15)
+head(crimeTotalCountsDay,15)
 ```
 
-The line plot informs of the trend, but a histogram or density plot inform of the distribution (skewness, kurtosis, spread):
+Now, you can plot by year:
 
 ```{r, eval=TRUE}
-base = ggplot(crimeDate2[crimeDate2$year>2010,],
-       aes(x = count)) + theme_classic()
+base = ggplot(crimeTotalCountsDay,
+       aes(x = counts)) + theme_classic()
 densePlot=base + geom_density(fill='grey', color=NA) 
 densePlot=densePlot+ facet_wrap(~year,
                                 ncol = 1, #all in one column
@@ -256,7 +283,7 @@ densePlot +
                                     angle = 0))
 ```
 
-We can use similar plots to the ones used in the previous material (cat-num). Let's keep duration longer than a year, and after 2000
+We can also use similar plots to the ones used in the previous material (cat-num). Let's keep duration longer than a year, and after 2000:
 
 ```{r filterexploreBOX2, eval=TRUE}
 # new filtered data frame
@@ -270,14 +297,14 @@ crimeY2000$YearsToReport=crimeY2000$DaysToReport/365
 #boxplot by Year
 base=ggplot(data = crimeY2000,
             aes(x=as.factor(year),
-                y=YearsToReport))
+                y=YearsToReport)) # is not ONE value
 boxByYear=base + geom_boxplot()
 
 boxByYear
 ```
 
 
-Remember that although the boxplot is very informative, it is advisable to  try familiar  statistics :
+Remember that although the boxplot is very informative, I recommend the use of familiar  statistics :
 
 
 ```{r, eval=TRUE}
@@ -300,15 +327,25 @@ MxMnMDs= MxMnMDs + scale_colour_manual(values=myFunCols,
 MxMnMDs
 ```
 
-Connecting the dots (using **group** in **aes**), as we also did last session:
+Notice that if we want to connect the points this may not be what you have in mind:
+
+```{r, eval=TRUE}
+MxMnMDs + geom_line()
+
+```
+
+Remember that _YearsToReport_ is NOT one value, but several. Then, connecting the dots requires to override the grouping of the dots, to choose only ONE value, that just pick the max value:
 
 ```{r, eval=TRUE}
 MxMnMDsL=MxMnMDs+ geom_line(stat="summary",fun='max',
-                            aes(group=1,color="Max"))
+                            aes(color="Max"),
+                            group=1)
 MxMnMDsL=MxMnMDsL+ geom_line(stat="summary",fun='min',
-                            aes(group=1,color="Min"))
+                            aes(color="Min"),
+                            group=1)
 MxMnMDsL=MxMnMDsL+ geom_line(stat="summary",fun='median',
-                            aes(group=1,color="Median")) # changing text angle
+                            aes(color="Median"),
+                            group=1) 
 MxMnMDsL + theme(axis.text.x = element_text(angle = 60,
                                             vjust = 0.5
                                             ))
@@ -384,7 +421,8 @@ plot1 + geom_text_repel(aes(label=ifelse(DaysToReport>7,Neighborhood, "")))
 ```
 
 
-Besides conditionally annotating the places, you can identify the area where of the most salient behavior. Let's highlight overlaping of points:
+Besides conditionally annotating the places, you can identify the area of the most salient behavior. Let's highlight overlaping points:
+
 ```{r hexbins, eval=TRUE}
 scatp1 = base +  geom_hex(bins = 10)
 scatp2= scatp1 + geom_text_repel(aes(label=ifelse(CrimeShare>=5, Neighborhood, "")))
