@@ -18,28 +18,21 @@ _____
 
 We analyze two variables to find out if there might be some kind of association between them. Even though that may be difficult to clearly identify, bivariate analysis still helps reveal _signs_ of association that may serve at least to raise concern.
 
-As before, the nature of the data allows for some particular analytical techniques, while also providing some limitations to our inferences. Let's see what we can visualize with the different combinations of data.
 
-This time, I will use the [data about crime](https://data.seattle.gov/Public-Safety/Crime-Data/4fs7-3vj5) from the Seattle Open Data portal. The file has been previously prepared and consists of around half a million rows:
+Let me use the [data about crime](https://data.seattle.gov/Public-Safety/Crime-Data/4fs7-3vj5) from the Seattle Open Data portal (I have formatted  this  file previously).
 
 ```{r collect, eval=TRUE}
+# clear memory
+rm(list = ls())
 # collecting the data
 link="https://github.com/EvansDataScience/data/raw/master/crime.RData"
-load(file = url(link))
+load(file = url(link)) #loaded as 'crime'
 ```
 
-
-The columns available are:
-
-```{r names, eval=TRUE}
-# seeing the variable names
-names(crime)
-```
-
-Let's see what kind of data we have:
+Let's see what kind of data we have in **crime** data table:
 
 ```{r str, eval=TRUE}
-# checking data types
+# categorical? numerical?
 str(crime,width = 50,strict.width='cut')
 ```
 
@@ -48,55 +41,69 @@ _____
 
 # Categorical-Categorical relationships
 
-The main way to organize these relationships are the contingency tables. Let's select a couple of categorical variables:
+While we use _frequency tables_ in the univariate case, for the bivariate case (cat-cat) we prepare _**contingency tables**_. Let's select a couple of categorical variables:
 
+* Precinct (where crimes occur)
+* Occurred.DayTime (when crimes occur)
 
+This contingency table shows counts for each combination of levels:
 ```{r, eval=TRUE}
-# contingency table of counts
-(PrecintDaytime=table(crime$Precinc,crime$Occurred.DayTime))
+(PrecinctDaytime=table(crime$Precinct,crime$Occurred.DayTime))
 ```
 
-The contingency table shows the concurrent counts for every category. Those tables can show either total or marginal counts or percents. However, when a table tries to hypothesize a relationship, you should have the _independent_ variable in the columns, and the _dependent_ one in the rows; then, the percent should be computed by column to see how the levels of the dependent variable varies by each level of the independent one, and compare along rows:
+When a table tries to hypothesize a relationship, you should have the _independent_ variable in the columns, and the _dependent_ one in the rows. 
+Interpretation is difficult when you have counts so it is better to have percents. Percents should be computed by column to see how the levels of the dependent variable varies by each level of the independent one (reading along rows):
 
 ```{r, eval=TRUE}
-# computing marginal percent (per column) from contingency table
+# computing column percent from contingency table
 library(magrittr) # for %>%
-(PrecDayti_mgCol=prop.table(PrecintDaytime,
-                            margin = 2)%>%round(.,3))
+(PrecDayti_mgCol=prop.table(PrecinctDaytime,
+                            margin = 2) #2 means by column
+                             %>%round(.,3))
 ```
 
 
-The previous table shows you how the crimes that occur in a precinct are affected by the time they happen. So you need a plot that allows to highlight those differences accross time.
+The previous table shows you how the crimes that occur in a precinct _are affected_ by the time they happen. So you need a plot that allows to highlight those differences accross time.
 
-As you know, a table can not be plotted unless they are turned into a data frame:
+As before, we need to turn this table into a data frame:
 
 ```{r, eval=TRUE}
 #making a data frame from contingency table
-PrecDaytiDF=as.data.frame(PrecintDaytime)
-names(PrecDaytiDF)=c("precint","daytime","counts")
-
-#adding marginal percents:
-PrecDaytiDF$pctCol=as.data.frame(PrecDayti_mgCol)[,3]
+(PrecDaytiDF=as.data.frame(PrecinctDaytime))
 ```
+We also have the table with marginal percents by column:
 
-Then, you have:
+```{r}
+as.data.frame(PrecDayti_mgCol)
+```
+We should simply add the last column to the data frame of counts.
 
-```{r, eval=TRUE}
-# head of data frame representing contingency table and marginals
+```{r}
+PrecDaytiDF$share=as.data.frame(PrecDayti_mgCol)[,3]
 PrecDaytiDF
 ```
 
+We can change the names of the previous data frame:
+```{r}
+names(PrecDaytiDF)[1:3]=c("precinct","daytime","counts")
 
-Let's tell ggplot we will use daytime (x) by pctCol (y) and fill according to precinct:
+#then
+PrecDaytiDF
+
+
+```
+
+We will use _ggplot_ to represent the _contingency table_:
 
 ```{r base, eval=TRUE}
 library(ggplot2)
 base1=ggplot(data=PrecDaytiDF, 
-             aes(x=daytime, y=pctCol,
-                 fill=precint)) # fill brings a legend
+             aes(x=daytime,
+                 y=share,
+                 fill=precinct)) # fill brings a legend
 ```
 
-Then, you try some bar options. First, the **dodge** style:
+Then, you play with some positions for the bar. First, the **dodge** style:
 
 ```{r, eval=TRUE}
 barDodge= base1 +  geom_bar(stat="identity",
@@ -112,42 +119,41 @@ barStacked = base1 + geom_bar(stat = "identity",
 barStacked 
 ```
 
-The stacked version will help more than the dodged one as it reveals better the values in the contingency table, so we continue with adding some elements:
+The stacked version will help more than the dodged one as it reveals better the values in the contingency table:
+```{r}
+PrecDayti_mgCol
+```
+
+
+So, we continue with adding some elements to this one:
 
 ```{r, eval=TRUE}
 library(scales)
-barStacked= barStacked + geom_text(size = 5,# check below:
+#annotating
+barStackedAnn= barStacked + geom_text(size = 5,# check below:
                              position = position_stack(vjust = 0.5),# center
-                             aes(label=percent(pctCol,accuracy = 0.1)))# percent format
+                             aes(label=percent(share,accuracy = 0.1)))# percent format
 
-barStacked = barStacked + scale_y_continuous(labels = scales::percent)
+barStackedAnn = barStackedAnn + scale_y_continuous(labels = percent)
 
-barStacked
+barStackedAnn
 ```
 
-Since the precinct is nominal, and you see some marked differences along the rows, I can reorder its levels:
-
-```{r, eval=TRUE}
-PrecDaytiDF$precint=factor(PrecDaytiDF$precint,
-                           levels=c("SOUTHWEST","EAST", "SOUTH","WEST","NORTH"))
-
-```
-
-Now, let me redo the last plot from the very beginning after the last change:
+Since the precinct is nominal, and you see some marked differences along the percents, you can reorder the precinct blocks with **reorder()**:
 
 ```{r, eval=TRUE}
 
 base1=ggplot(data=PrecDaytiDF, 
-             aes(x=daytime, y=pctCol,
-                 fill=precint)) 
+             aes(x=daytime, y=share,
+                 fill=reorder(precinct,share))) ## reordering
 
 barStacked = base1 + geom_bar(stat = "identity",
                               position = 'stack')
 barStacked= barStacked + geom_text(size = 5,
                              position = position_stack(vjust = 0.5),
-                             aes(label=percent(pctCol,accuracy = 0.1)))
+                             aes(label=percent(share,accuracy = 0.1)))
 
-barStacked = barStacked + scale_y_continuous(labels = scales::percent)
+barStacked = barStacked + scale_y_continuous(labels = percent)
 
 barStacked
 
@@ -162,227 +168,117 @@ Let me show you a more complex situation:
 (CrimeDay=table(crime$crimecat,crime$Occurred.DayTime))
 ```
 
-This contingency table has one categorical variables with several levels, let's prepare turn the table into a data frame:
+This contingency table has one categorical variables with several levels, let's prepare a data frame as before:
 
 ```{r, eval=TRUE}
 #making a data frame from contingency table
 CrimeDayDF=as.data.frame(CrimeDay)
-#renaming:
-names(CrimeDayDF)=c("crime","daytime","counts")
 #marginal
 CrimeDay_mgCol=prop.table(CrimeDay,margin = 2)
+#renaming:
+names(CrimeDayDF)=c("crime","daytime","counts")
 #adding marginal
-CrimeDayDF$pctCol=as.data.frame(CrimeDay_mgCol)[,3]
+CrimeDayDF$share=as.data.frame(CrimeDay_mgCol)[,3]
 # result for ggplot:
 head(CrimeDayDF,20)
 ```
 
 
-Sometime, a simple contingency table does not need to be plotted in order to reveal salient relationships; bt in this case we need visual help to discover some association.
+Sometimes, a simple contingency table does not need to be plotted in order to reveal salient relationships; but in this case a visual may be needed.
 
-Last time, we turn the contingency table into a stacked barplot, let's try again:
+As before, let's request a _stacked_ barplot:
 
 ```{r BADplot,eval=TRUE}
 # bad idea
 base2=ggplot(data=CrimeDayDF,
-             aes(x=daytime,y=pctCol,fill=crime))
+             aes(x=daytime,y=share,fill=crime))
+
 base2=base2 + geom_bar(stat = "identity", position = 'fill') + 
         geom_text(size = 3, 
                   position = position_stack(vjust = 0.5),
-                  aes(label=percent(pctCol,accuracy = 0.1)))
-barStacked2 = base2 + scale_y_continuous(labels = scales::percent)
+                  aes(label=percent(share,accuracy = 0.1)))
+
+barStacked2 = base2 + scale_y_continuous(labels = percent)
 
 barStacked2
 ```
 
-This plot will need a lot of work, so using the previous plots may not be a good strategy.  
+This plot will need a lot of work, so using it may not be a good strategy.  
 
-A first option you may have is to reproduce the table:
-
-```{r plotTable_gg, eval=TRUE}
-#new base
-base3 = ggplot(CrimeDayDF, aes(x=daytime,y=crime)) 
-# plot value as point, size by value of percent
-tablePlot = base3 + geom_point(aes(size = pctCol*100)) 
-# add value of Percent as label
-tablePlot = tablePlot + geom_text(aes(label = percent(pctCol,
-                                                      accuracy = 0.1,
-                                                      suffix = "")),#no %
-                                  nudge_x = 0.3,
-                                  size=3)
-tablePlot
-```
-
-...some more work:
-```{r, eval=TRUE}
-# improving previous plot
-
-tablePlot = tablePlot + theme_minimal() # less ink
-tablePlot = tablePlot + theme(legend.position="none") # no legend
-tablePlot
-```
-
-
-
-The plot looks nice, but unless the differences are clearly cut, you may see more noise than information, which distracts and delays decision making. Keep in mind that _length_ of bars are easier to compare than circle _areas_. Let;s go for a dodged barplot, but with the help of **facets**:
+A first option you be to use a _barplot_ with **facets** with bars _dodged_. Let'a make the first attempt.
 
 ```{r facet, eval=TRUE}
-# as usual for barplot (less info than base1)
-base4 = ggplot(CrimeDayDF, aes(x = daytime, y = pctCol ) ) 
+# base with only X and Y in 'aes()'
+baseBar = ggplot(CrimeDayDF, aes(x = crime, y = share ) ) 
 
 #the bars
-bars  = base4 + geom_bar( stat = "identity" ) + theme_minimal()
+barPlot  = baseBar + geom_bar( stat = "identity" ) 
+
+barPlot
+```
+Now see the facets:
+
+```{r}
 
 # bar per day time with 'facet'
-barsFa = bars + facet_grid(~ crime) 
+barsFt = barPlot + facet_grid(~ daytime) 
 
-barsFa
+barsFt
 ```
 
-In the previous plot we respected the XY relationship, but this does not look like the crosstable; let's solve that:
+This does not look like the crosstable yet; let's solve that:
 
-```{r, eval=TRUE}
-# change x to our early Y
-base4 = ggplot(CrimeDayDF, aes(x = crime, y = pctCol ) ) 
-bars  = base4 + geom_bar( stat = "identity" ) + theme_minimal()
-barsFa = bars + facet_grid(~ daytime)  # X
-# trick
-barsFa + coord_flip()
+```{r}
+barsFt + coord_flip()
 ```
 
 
 The type of crime is not ordinal, then we could **reorder** the bars:
 
 ```{r orderFacet, eval=TRUE}
-# introducing "reorder""
-
-#crime ordered by %
 # new base
 baseRE  = ggplot(CrimeDayDF, 
-                 aes(x = reorder(crime, pctCol), #here
-                     y = pctCol ) ) + theme_minimal()
+                 aes(x = reorder(crime, share), #here
+                     y = share ) ) + theme_minimal()
 
-barsRE = baseRE + geom_bar( stat = "identity" ) 
-barsREFa = barsRE + facet_grid( ~ daytime) 
-barsREFa= barsREFa + coord_flip() 
+barPlotRE = baseRE + geom_bar( stat = "identity" ) 
+barFtRE = barPlotRE + facet_grid( ~ daytime) 
+barFtRE= barFtRE + coord_flip() 
 
 
-barsREFa
+barFtRE
 ```
 
-Let's annotate:
+Let's work on the crime _labels_
 ```{r, eval=TRUE}
 
-barsREFa + theme(axis.text.y = element_text(size=7,angle = 20)) + 
-           geom_text(aes(label=round(pctCol,2)),
+barFtRE=barFtRE + theme(axis.text.y = element_text(size=7,angle = 20)) 
+barFtRE
+```
+Would you annotate the bars:
+```{r}
+barREann= barFtRE+ geom_text(aes(label=round(share,2)),
+                             nudge_y = 0.1)
+barREann
+```
+
+Let's annotate conditionally instead:
+
+```{r, eval=TRUE}
+
+barCond=barFtRE + geom_text(aes(label=ifelse(share>0.1,# condition to annotate
+                                      round(share,2),"")),
                      nudge_y = 0.1)
+barCond
 ```
-
-Let's improve the annotation:
-```{r, eval=TRUE}
-
-barsREFa + theme(axis.text.y = element_text(size=7,angle = 20)) + 
-           geom_text(aes(label=ifelse(pctCol>0.1,# condition to annotate
-                                      round(pctCol,2),"")),
-                     nudge_y = 0.1)
-```
+What about percents instead:
 
 ```{r, eval=TRUE}
 
-barsREFa + theme(axis.text.y = element_text(size=7,angle = 20)) + 
-           geom_text(aes(label=ifelse(pctCol>0.1,# condition to annotate
-                                      scales::percent(round(pctCol,2)),"")),
+barFtRE + geom_text(aes(label=ifelse(share>0.1,
+                                      percent(share,accuracy = 1),# %
+                                     "")),
                      nudge_y = 0.1,size=3) + 
-           scale_y_continuous(labels = percent_format(accuracy = 1,suffix="")) +
-    labs(title= "You can not feel safe any time of the day",
-         subtitle = "Seattle, WA",
-         caption = "Seattle Crime Data - Official open data portal",
-         x="Crimes",y="%")
+           scale_y_continuous(labels = percent_format(accuracy = 1,suffix="")) #%
 
 ```
-
-You can try playing with color gradient:
-
-```{r heatDescending, eval=TRUE}
-# heatplot
-base  = ggplot(CrimeDayDF, aes(x = daytime, 
-                               y = reorder(crime, pctCol), 
-                               fill = pctCol*100)) 
-heat = base +  geom_tile()
-
-# grey intensity
-heat = heat +scale_fill_gradient(low = "white", 
-                                   high = "black")
-heat = heat + theme_classic()
-
-heat
-```
-
-Some little changes:
-
-```{r, eval=TRUE}
-# improving heat plot
-
-heat = heat + labs(y="Crime", "Time of day")
-heat = heat + theme(axis.text.x = element_text(angle = 60, 
-                                               vjust = 0.6), 
-                      legend.title = element_blank(), #no leg. title 
-                      legend.position="top", 
-                      legend.direction="horizontal",
-                      legend.key.width=unit(1, "cm"),
-                      legend.key.height=unit(1, "cm")) 
-
-heat
-```
-
-You can try a different palette:
-
-```{r, eval=TRUE}
-# heatplot
-base  = ggplot(CrimeDayDF, aes(x = daytime, 
-                               y = reorder(crime, pctCol), 
-                               fill = pctCol*100)) 
-heat = base +  geom_tile()
-
-# CHANGING COLORS
-heat = heat +scale_fill_gradientn(colours = colorspace::heat_hcl(4))
-heat = heat + theme_classic()
-
-heat = heat + labs(y="Crime", "Time of day")
-heat = heat + theme(axis.text.x = element_text(angle = 60, 
-                                               vjust = 0.6), 
-                      legend.title = element_blank(), #no leg. title 
-                      legend.position="top", 
-                      legend.direction="horizontal",
-                      legend.key.width=unit(1, "cm"),
-                      legend.key.height=unit(1, "cm")) 
-
-heat
-```
-
-And alter the direction of the color:
-
-```{r, eval=TRUE}
-# heatplot
-base  = ggplot(CrimeDayDF, aes(x = daytime, 
-                               y = reorder(crime, pctCol), 
-                               fill = pctCol*100)) 
-heat = base +  geom_tile()
-
-# ALTERING DIRECTION
-heat = heat +scale_fill_gradientn(colours = rev(colorspace::heat_hcl(4)))
-heat = heat + theme_classic()
-
-heat = heat + labs(y="Crime", "Time of day")
-heat = heat + theme(axis.text.x = element_text(angle = 60, 
-                                               vjust = 0.6), 
-                      legend.title = element_blank(), #no leg. title 
-                      legend.position="top", 
-                      legend.direction="horizontal",
-                      legend.key.width=unit(1, "cm"),
-                      legend.key.height=unit(1, "cm")) 
-
-heat
-```
-
-I think this may not be better than our last barplot, but it may work in other situations.
