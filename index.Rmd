@@ -29,6 +29,7 @@ link="https://github.com/EvansDataScience/data/raw/master/crime.RData"
 load(file = url(link)) #loaded as 'crime'
 ```
 
+
 Let's see what kind of data we have in **crime** data table:
 
 ```{r str, eval=TRUE}
@@ -216,6 +217,8 @@ barPlot  = baseBar + geom_bar( stat = "identity" )
 
 barPlot
 ```
+
+
 Now see the facets:
 
 ```{r}
@@ -255,12 +258,15 @@ Let's work on the crime _labels_
 barFtRE=barFtRE + theme(axis.text.y = element_text(size=7,angle = 20)) 
 barFtRE
 ```
+
+
 Would you annotate the bars:
 ```{r}
 barREann= barFtRE+ geom_text(aes(label=round(share,2)),
                              nudge_y = 0.1)
 barREann
 ```
+
 
 Let's annotate conditionally instead:
 
@@ -271,6 +277,7 @@ barCond=barFtRE + geom_text(aes(label=ifelse(share>0.1,# condition to annotate
                      nudge_y = 0.1)
 barCond
 ```
+
 What about percents instead:
 
 ```{r, eval=TRUE}
@@ -405,6 +412,8 @@ boxYear=baseYear + geom_boxplot() +
 # flipping
 boxYear  + coord_flip()
 ```
+
+
 If we are showing the days in takes above a year, we might change the unit to years instead of days:
 
 ```{r}
@@ -575,6 +584,7 @@ monthly= base  + geom_line(alpha=0.3)
 monthly= monthly + scale_x_date(limits = c(start, end))
 monthly
 ```
+
 We could also add a trend:
 
 ```{r}
@@ -592,12 +602,15 @@ crimeDate2=table(crime_nona$Occurred.Date,crime_nona$crimecat)%>%
 head(crimeDate2,10)
 ```
 
-Let's reformat crimeDate:
+The column of **dates** appears as a *factor*; let's reformat crimeDate:
 
 ```{r, eval=TRUE}
 names(crimeDate2)=c("date","crime",'count')
 #formatting column in Freq Table:
 crimeDate2$date=as.Date(crimeDate2$date)
+
+#then
+head(crimeDate2,10)
 
 ```
 
@@ -662,14 +675,26 @@ head(crimeTotalCountsDay,15)
 
 Now, you can plot by year:
 
+```{r}
+base = ggplot(crimeTotalCountsDay,
+       aes(x = counts)) 
+HistSimple=base + geom_histogram(fill='grey', color=NA) 
+HistFacet=HistSimple+ facet_wrap(~year(crimeTotalCountsDay$date),
+                                ncol = 1, #all in one column
+                                strip.position = 'right')#,#year
+HistFacet
+```
+
+In general, it would look better if we use densities:
+
 ```{r, eval=TRUE}
 base = ggplot(crimeTotalCountsDay,
        aes(x = counts)) + theme_classic()
 densePlot=base + geom_density(fill='grey', color=NA) 
-densePlot=densePlot+ facet_wrap(~year(crimeTotalCountsDay$date),
+denseFacet=densePlot+ facet_wrap(~year(crimeTotalCountsDay$date),
                                 ncol = 1, #all in one column
                                 strip.position = 'right')#,#year
-densePlot 
+denseFacet
 
 ```
 
@@ -862,27 +887,45 @@ The palettes can be selected from the [brewer colors website](http://colorbrewer
 
 ```{r density,eval=TRUE}
 heat2 = base +  stat_density_2d(aes(fill = ..density..), 
-                                 geom = "raster", contour = FALSE) + scale_fill_distiller(palette="Greys", direction=1) 
+                                 geom = "raster", contour = FALSE) + scale_fill_distiller(palette="Reds", direction=1) 
 heat2
 ```
 
-The extra space you see can dissappear using:
-
-```{r, eval=TRUE}
-heat2 +  scale_x_continuous(expand = c(0, 0)) + 
-         scale_y_continuous(expand = c(0, 0)) 
-
-```
 
 Now you have an approximate of the places representing the most common behavior:
-
-```{r, eval=TRUE}
-base = ggplot(num_num, aes(x=DaysToReport,y=CrimeShare)) 
-heatZoom= base +  geom_point() + xlim(c(2,5))+ ylim(c(0,3))
-heatZoom= heatZoom + geom_text_repel(aes(label=Neighborhood),size=2)
-heatZoom
+```{r}
+heat2 + theme_light() + 
+    geom_text_repel(aes(label=Neighborhood),size=2,color='black',
+                        fontface='bold',
+                        min.segment.length = 0,
+                        max.overlaps = 100) +  
+    scale_x_continuous(expand = c(0, 0),limits = c(2,5)) + 
+    scale_y_continuous(expand = c(0, 0),limits = c(0.5,3)) 
 ```
 
+You can use **geom_label_repel** in some cases (but in this case might not work well).
 
+```{r}
+heat2 + theme_light() + 
+    geom_label_repel(aes(label=Neighborhood),size=2,color='black',
+                        fontface='bold',
+                        min.segment.length = 0,
+                        max.overlaps = 100) +  
+    scale_x_continuous(expand = c(0, 0),limits = c(2,5)) + 
+    scale_y_continuous(expand = c(0, 0),limits = c(0.5,3))
+```
 
+Sometimes increasing the size helps:
+
+```{r, fig.width=10}
+heat2 + theme_light() + 
+    geom_label_repel(aes(label=Neighborhood),size=2,color='black',
+                        fontface='bold',
+                        min.segment.length = 0,
+                        max.overlaps = 100) +  
+    scale_x_continuous(expand = c(0, 0),limits = c(2,5)) + 
+    scale_y_continuous(expand = c(0, 0),limits = c(0.5,3))
+```
+
+Some of these plot work better when in interactive mode.
 
