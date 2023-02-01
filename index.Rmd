@@ -1,32 +1,14 @@
-<br> 
-<center><img src="http://i.imgur.com/sSaOozN.png" width="500"></center>
+```{r}
+library(ggplot2)
+```
 
-
-## Course: VISUAL ANALYTICS FOR POLICY AND MANAGEMENT
-
-### Prof. José Manuel Magallanes, PhD 
-* Visiting Professor of Computational Policy at Evans School of Public Policy and Governance, and eScience Institute Senior Data Science Fellow, University of Washington.
-* Professor of Government and Political Methodology, Pontificia Universidad Católica del Perú. 
-
-
-_____
-
-<a id='TOC'></a>
-
-# Tabular data - Bivariate relationships I: Categorical-Categorical
-
-
-We analyze two variables to find out if there might be some kind of association between them. Even though that may be difficult to clearly identify, bivariate analysis still helps reveal _signs_ of association that may serve at least to raise concern.
-
-
-Let me use the [data about crime](https://data.seattle.gov/Public-Safety/Crime-Data/4fs7-3vj5) from the Seattle Open Data portal (I have formatted  this  file previously).
 
 ```{r collect, eval=TRUE}
 # clear memory
 rm(list = ls())
 # collecting the data
-link="https://github.com/EvansDataScience/data/raw/master/crime.RData"
-load(file = url(link)) #loaded as 'crime'
+link='https://github.com/Data-Visual-Masters/Deliverable2/raw/main/Fremont_Bridge_Bicycle_Counter.csv'
+fremont=read.csv(link)
 ```
 
 
@@ -34,848 +16,71 @@ Let's see what kind of data we have in **crime** data table:
 
 ```{r str, eval=TRUE}
 # categorical? numerical?
-str(crime,width = 50,strict.width='cut')
+str(fremont,width = 50,strict.width='cut')
 ```
-
-_____
-
-
-# Categorical-Categorical relationships
-
-While we use _frequency tables_ in the univariate case, for the bivariate case (cat-cat) we prepare _**contingency tables**_. Let's select a couple of categorical variables:
-
-* Precinct (where crimes occur)
-* Occurred.DayTime (when crimes occur)
-
-This contingency table shows counts for each combination of levels:
-```{r, eval=TRUE}
-(PrecinctDaytime=table(crime$Precinct,crime$Occurred.DayTime))
-```
-
-When a table tries to hypothesize a relationship, you should have the _independent_ variable in the columns, and the _dependent_ one in the rows. 
-Interpretation is difficult when you have counts so it is better to have percents. Percents should be computed by column to see how the levels of the dependent variable varies by each level of the independent one (reading along rows):
-
-```{r, eval=TRUE}
-# computing column percent from contingency table
-library(magrittr) # for %>%
-(PrecDayti_mgCol=prop.table(PrecinctDaytime,
-                            margin = 2) #2 means by column
-                             %>%round(.,3))
-```
-
-
-The previous table shows you how the crimes that occur in a precinct _are affected_ by the time they happen. So you need a plot that allows to highlight those differences accross time.
-
-As before, we need to turn this table into a data frame:
-
-```{r, eval=TRUE}
-#making a data frame from contingency table
-(PrecDaytiDF=as.data.frame(PrecinctDaytime))
-```
-We also have the table with marginal percents by column:
-
-```{r}
-as.data.frame(PrecDayti_mgCol)
-```
-We should simply add the last column to the data frame of counts.
-
-```{r}
-PrecDaytiDF$share=as.data.frame(PrecDayti_mgCol)[,3]
-PrecDaytiDF
-```
-
-We can change the names of the previous data frame:
-```{r}
-names(PrecDaytiDF)[1:3]=c("precinct","daytime","counts")
-
-#then
-PrecDaytiDF
-
-
-```
-
-We will use _ggplot_ to represent the _contingency table_:
-
-```{r base, eval=TRUE}
-library(ggplot2)
-base1=ggplot(data=PrecDaytiDF, 
-             aes(x=daytime,
-                 y=share,
-                 fill=precinct)) # fill brings a legend
-```
-
-Then, you play with some positions for the bar. First, the **dodge** style:
-
-```{r, eval=TRUE}
-barDodge= base1 +  geom_bar(stat="identity",
-                            position ='dodge') 
-barDodge 
-```
-
-The second is the **stack** style:
-
-```{r, eval=TRUE}
-barStacked = base1 + geom_bar(stat = "identity",
-                              position = 'stack')#default
-barStacked 
-```
-
-The stacked version will help more than the dodged one as it reveals better the values in the contingency table:
-```{r}
-PrecDayti_mgCol
-```
-
-
-So, we continue with adding some elements to this one:
-
-```{r, eval=TRUE}
-library(scales)
-#annotating
-barStackedAnn= barStacked + geom_text(size = 5,# check below:
-                             position = position_stack(vjust = 0.5),# center
-                             aes(label=percent(share,accuracy = 0.1)))# percent format
-
-barStackedAnn = barStackedAnn + scale_y_continuous(labels = percent)
-
-barStackedAnn
-```
-
-Since the precinct is nominal, and you see some marked differences along the percents, you can reorder the precinct blocks with **reorder()**:
-
-```{r, eval=TRUE}
-
-base1=ggplot(data=PrecDaytiDF, 
-             aes(x=daytime, y=share,
-                 fill=reorder(precinct,share))) ## reordering
-
-barStacked = base1 + geom_bar(stat = "identity",
-                              position = 'stack')
-barStacked= barStacked + geom_text(size = 5,
-                             position = position_stack(vjust = 0.5),
-                             aes(label=percent(share,accuracy = 0.1)))
-
-barStacked = barStacked + scale_y_continuous(labels = percent)
-
-barStacked
-
-
-```
-
-Let me show you a more complex situation:
-
-```{r table, eval=TRUE}
-# contingency table with many levels:
-
-(CrimeDay=table(crime$crimecat,crime$Occurred.DayTime))
-```
-
-This contingency table has one categorical variables with several levels, let's prepare a data frame as before:
-
-```{r, eval=TRUE}
-#making a data frame from contingency table
-CrimeDayDF=as.data.frame(CrimeDay)
-#marginal
-CrimeDay_mgCol=prop.table(CrimeDay,margin = 2)
-#renaming:
-names(CrimeDayDF)=c("crime","daytime","counts")
-#adding marginal
-CrimeDayDF$share=as.data.frame(CrimeDay_mgCol)[,3]
-# result for ggplot:
-head(CrimeDayDF,20)
-```
-
-
-Sometimes, a simple contingency table does not need to be plotted in order to reveal salient relationships; but in this case a visual may be needed.
-
-As before, let's request a _stacked_ barplot:
-
-```{r BADplot,eval=TRUE}
-# bad idea
-base2=ggplot(data=CrimeDayDF,
-             aes(x=daytime,y=share,fill=crime))
-
-base2=base2 + geom_bar(stat = "identity", position = 'fill') + 
-        geom_text(size = 3, 
-                  position = position_stack(vjust = 0.5),
-                  aes(label=percent(share,accuracy = 0.1)))
-
-barStacked2 = base2 + scale_y_continuous(labels = percent)
-
-barStacked2
-```
-
-This plot will need a lot of work, so using it may not be a good strategy.  
-
-A first option you be to use a _barplot_ with **facets** with bars _dodged_. Let'a make the first attempt.
-
-```{r facet, eval=TRUE}
-# base with only X and Y in 'aes()'
-baseBar = ggplot(CrimeDayDF, aes(x = crime, y = share ) ) 
-
-#the bars
-barPlot  = baseBar + geom_bar( stat = "identity" ) 
-
-barPlot
-```
-
-
-Now see the facets:
-
-```{r}
-
-# bar per day time with 'facet'
-barsFt = barPlot + facet_grid(~ daytime) 
-
-barsFt
-```
-
-This does not look like the crosstable yet; let's solve that:
-
-```{r}
-barsFt + coord_flip()
-```
-
-
-The type of crime is not ordinal, then we could **reorder** the bars:
-
-```{r orderFacet, eval=TRUE}
-# new base
-baseRE  = ggplot(CrimeDayDF, 
-                 aes(x = reorder(crime, share), #here
-                     y = share ) ) + theme_minimal()
-
-barPlotRE = baseRE + geom_bar( stat = "identity" ) 
-barFtRE = barPlotRE + facet_grid( ~ daytime) 
-barFtRE= barFtRE + coord_flip() 
-
-
-barFtRE
-```
-
-Let's work on the crime _labels_
-```{r, eval=TRUE}
-
-barFtRE=barFtRE + theme(axis.text.y = element_text(size=7,angle = 20)) 
-barFtRE
-```
-
-
-Would you annotate the bars:
-```{r}
-barREann= barFtRE+ geom_text(aes(label=round(share,2)),
-                             nudge_y = 0.1)
-barREann
-```
-
-
-Let's annotate conditionally instead:
-
-```{r, eval=TRUE}
-
-barCond=barFtRE + geom_text(aes(label=ifelse(share>0.1,# condition to annotate
-                                      round(share,2),"")),
-                     nudge_y = 0.1)
-barCond
-```
-
-What about percents instead:
-
-```{r, eval=TRUE}
-
-barFtRE + geom_text(aes(label=ifelse(share>0.1,
-                                      percent(share,accuracy = 1),# %
-                                     "")),
-                     nudge_y = 0.1,size=3) + 
-           scale_y_continuous(labels = percent_format(accuracy = 1,suffix="")) #%
-
-```
-
-
-# Tabular data - Bivariate relationships II: Categorical-Numerical
-
-
-Let's keep using the same data on crimes. The next cases will show how a categorical variable can help us better understand the behavior of a numeric variable. 
-
-Let's take a look at a variable that informs the amount of days it takes someone to report a crime:
-
-```{r summaryTime, eval=TRUE}
-# stats of days to report
-# notice the spread of values.
-summary(crime$DaysToReport)
-```
-
-The max is a very high value. Let me see the crimes that took the longest:
-
-```{r reordering, eval=TRUE}
-crime[which.max(crime$DaysToReport),]
-```
-
-Do you think this is right? This looks like a mistyping, as the **Reported.Date** is very similar, exactly 100 years later. Let's alter the  **Ocurred.Date** value.
-```{r, eval=TRUE}
-crime[6783,'Occurred.Date']=crime[6783,'Reported.Date']
-```
-
-We also need to recompute the value **DaysToReport** value:
-
-```{r}
-crime[6783,'DaysToReport']=difftime(crime[6783,'Reported.Date'],
-                                    crime[6783,'Occurred.Date'],
-                                    units = "days")%>%as.numeric()
-```
-The **weekday** and the **year** may need to be updated:
-
-```{r}
-library(lubridate)
-crime[6783,'weekday']=wday(crime[6783,'Occurred.Date'], 
-                           label=TRUE,
-                           abbr = FALSE)
-crime[6783,'year']=year(crime[6783,'Occurred.Date'])
-```
-
-
-Let's use again the category _Precinct_ with the numerical _DaysToReport_. Let's just keep the non-missing data in the table this time:
-
-```{r nonmiss, eval=TRUE}
-crime_nona=crime[complete.cases(crime),]
-```
-
-Let me get the median for each precinct:
-```{r aggregate, eval=TRUE}
-# summary: median by groups
-aggregate(data=crime_nona, DaysToReport~Precinct,median)
-```
-
-As you see, 50% of the cases are reported the same day. Let's request a boxplot for each precinct:
-
-```{r boxNumCat1, eval=TRUE}
-# boxplot of days to report per precinct
-
-library(ggplot2)
-base=ggplot(data=crime_nona,
-            aes(x=Precinct,y=DaysToReport))
-
-base + geom_boxplot()
-```
-
-
-The plot above would not give so much insight, there is so much **noise**. Let's check other statistics beside the median:
-
-```{r tapplySummary, eval=TRUE}
-# using "summary" function
-tapply(crime_nona$DaysToReport,
-       crime_nona$Precinct, summary)
-```
-
-From the information above, you know that for each precinct, **the 75% of crimes are reported in a day or less**. If we consider that situation as the expected behavior, let me keep the ones that take more than a day using **ggarrange**:
-
-str(crime)
-```{r weeksandabove, eval=TRUE}
-library(ggpubr)
-
-baseWeek=ggplot(data=crime_nona[crime_nona$DaysToReport>=7,],
-            aes(x=Precinct,y=DaysToReport)) 
-boxWeek=baseWeek + geom_boxplot() + labs(title = "week and above")
-
-baseMonth=ggplot(data=crime_nona[crime_nona$DaysToReport>=30,],
-            aes(x=Precinct,y=DaysToReport))
-boxMonth=baseMonth + geom_boxplot() + labs(title = "month and above")
-
-
-baseYear=ggplot(data=crime_nona[crime_nona$DaysToReport>=365,],
-            aes(x=Precinct,y=DaysToReport)) 
-boxYear=baseYear + geom_boxplot() + labs(title = "year and above")
-
-
-
-#all in one:
-ggarrange(boxWeek,boxMonth,boxYear,ncol = 1)
-
-```
-
-Up to this point, you need to be planing a good _story_. The situation is different for each case, but let's build our visual from the crimes that take a year or longer to report.
-
-
-```{r, eval=TRUE}
-crimeYear=crime_nona[crime_nona$DaysToReport>=365,]
-```
-
-Let me see if flipping helps you see better:
-
-```{r, eval=TRUE}
-titleText="Crimes that took longer than one year to report"
-
-baseYear=ggplot(data=crimeYear,
-            aes(x=Precinct,
-                y=DaysToReport)) 
-boxYear=baseYear + geom_boxplot() + 
-        labs(title = titleText)
-# flipping
-boxYear  + coord_flip()
-```
-
-
-If we are showing the days in takes above a year, we might change the unit to years instead of days:
-
-```{r}
-crimeYear$YearsToReport=crimeYear$DaysToReport/365
-```
-
-
-Let's redo the previous boxplot, but using **reorder**ing the category by the median of the numeric variable:
-
-```{r, eval=TRUE}
-baseYear=ggplot(data=crimeYear,
-            aes(x=reorder(Precinct,
-                          YearsToReport,
-                          median),
-                y=YearsToReport)) 
-boxYear=baseYear + geom_boxplot() + labs(title =titleText)
-# flipping
-boxYear  + coord_flip()
-
-
-```
-
-What if we use the histogram:
-
-```{r, eval=TRUE}
-baseHY=ggplot(data=crimeYear,
-            aes(x=YearsToReport)) 
-histHY=baseHY + geom_histogram(aes(fill=Precinct), 
-                              color='black') #color the border
-histHY  
-```
-
-You need facets:
-
-```{r, eval=TRUE}
-histHY + facet_grid(~Precinct)
-```
-
-The alternative without legend:
-
-```{r, eval=TRUE}
-histHY + facet_grid(Precinct~.) + guides(fill="none")
-```
-
-What about reordering:
-
-```{r, eval=TRUE}
-histHYre= histHY + facet_grid(reorder(Precinct,
-                                  -DaysToReport,
-                                  median)~.) + guides(fill="none")
-histHYre
-```
-
-Another common visual is the mean-error plot, which shows the mean of the numeric variable including a confidence interval. Let me first recall the two variables I have been using:
-
-```{r, eval=TRUE}
-crimeYear[,c('Precinct', 'YearsToReport')] %>%head(20)
-```
-
-The  plan is to show the mean per precinct:
-
-```{r}
-library(Rmisc)
-Rmisc::group.CI(data=crimeYear,
-          YearsToReport~Precinct)
-```
-
-Let's represent that:
-
-```{r, eval=TRUE}
-baseMEANs=ggplot(crimeYear, aes(x=Precinct,
-                             y=YearsToReport)) +
-        theme_classic()
-pointMEANS=baseMEANs + stat_summary(fun = mean, 
-                                    geom = "point")
-pointMEANS 
-```
-
-We can add now the error bar:
-```{r, eval=TRUE}
-pointErrors=pointMEANS + stat_summary(fun.data = mean_ci,
-                                      geom = "errorbar") 
-pointErrors
-
- 
-```
-
-Error bars have a **huge problem**, they give you the illusion of symmetry. So, I recommend you include the data in the plot:
-
-
-```{r}
-BarJit=pointErrors + geom_jitter(colour="blue",
-                             alpha=0.2 #transparency
-                             )
-BarJit
-```
-
-Some might prefer a logarithmic scale on the vertical axis:
-```{r}
-BarJit + scale_y_log10(breaks=c(1,1.5,3,10,25,50)) + geom_hline(yintercept = 50,linetype='dashed')
-
-```
-
-
-
-
-# Tabular data - Bivariate relationships III: Numerical-Numerical
-
-
-
-## Numeric-Time data
-
-Let me use one of the _date_ variables in the crime data set (the one with no missing values):
-
-```{r, eval=TRUE}
-summary(crime_nona$Occurred.Date)
-```
-
-A date is to be repeated if other crimes occur the same day. Then we should prepare a frequency tables of those dates:
-
-
-```{r, eval=TRUE}
-crimeDate=as.data.frame(table(crime_nona$Occurred.Date))  # date will be a factor
-head(crimeDate,10)
-```
-
-The column with dates resulted into a factor when we computed the frequecy table. Let's change the factor to date, and also rename the columns:
-
-```{r, eval=TRUE}
-names(crimeDate)=c("date",'count')
-#formatting column in Freq Table:
-crimeDate$date=as.Date(crimeDate$date)
-
-```
-
-So now you have:
-
-```{r, eval=TRUE}
-head(crimeDate)
-```
-
-Let's show the line plot:
-
-```{r, eval=TRUE}
-base=ggplot(crimeDate,
-            aes(x=date,y=count))
-base  + geom_line(alpha=0.3) 
-```
-
-Let's zoom-in to dates starting in 2010:
-
-```{r, eval=TRUE}
-start <- as.Date("2010-1-1")
-end <- NA
-base=ggplot(crimeDate,
-            aes(x=date,y=count))
-base  + geom_line(alpha=0.3) + scale_x_date(limits = c(start, end)) 
-```
-
-Once we have daily counts we count use more of **lubridate**, like aggregating by month:
-
-```{r, eval=TRUE}
-
-base=ggplot(crimeDate,
-            aes(x=floor_date(date, "month"),
-                y=count))
-monthly= base  + geom_line(alpha=0.3) 
-monthly= monthly + scale_x_date(limits = c(start, end))
-monthly
-```
-
-We could also add a trend:
-
-```{r}
-# adding a trend:
-monthlyTrend = monthly + stat_smooth(color = "red",
-                      method = "loess")
-monthlyTrend
-```
-
-What about faceting by crime? However, our crimeDate data frame does not have that information. Let's redo it:
-
-```{r, eval=TRUE}
-crimeDate2=table(crime_nona$Occurred.Date,crime_nona$crimecat)%>%
-                as.data.frame()  # date will be a factor
-head(crimeDate2,10)
-```
-
-The column of **dates** appears as a *factor*; let's reformat crimeDate:
-
-```{r, eval=TRUE}
-names(crimeDate2)=c("date","crime",'count')
-#formatting column in Freq Table:
-crimeDate2$date=as.Date(crimeDate2$date)
-
-#then
-head(crimeDate2,10)
-
-```
-
-Let's keep focusing from 2010:
-```{r, eval=TRUE}
-
-base=ggplot(crimeDate2,
-            aes(x=floor_date(date, "month"),
-                y=count))
-monthly= base  + geom_line(alpha=0.3) 
-monthly= monthly + scale_x_date(limits = c(start, end))
-
-# adding a trend:
-monthly = monthly + stat_smooth(color = "red",
-                      method = "loess")
-monthly + facet_wrap(~crime)
-```
-
-Alternatively,
-
-```{r, eval=TRUE}
-monthly + facet_wrap(~reorder(crime,-count))
-```
-
-We just reorganized the previous plot so that we highlight the most and least common crimes along that time period.
-
-So far, lines have been used to report counts of the crimes. We can also analyze the distribution of the counts using histograms. I mean:
-
-
-```{r, eval=TRUE}
-crime2010since=crime[crime$Occurred.Date>"2010-1-1",]
-crimeTotalCountsDay=as.data.frame(table(crime2010since$Occurred.Date))
-crimeTotalCountsDay$Var1=as.Date(crimeTotalCountsDay$Var1)
-names(crimeTotalCountsDay)=c('date','counts')
-ggplot(data=crimeTotalCountsDay, aes(x=counts)) + geom_histogram() + xlab("crime per day")
-```
-
-The plot above shows a distribution of crimes per day since 2010. Check this summary:
-```{r, eval=TRUE}
-summary(crimeTotalCountsDay$counts)
-```
-This is telling that you had a day when there were 199 crimes:
-```{r, eval=TRUE}
-# checking the original data:
-sort(table(crime2010since$Occurred.Date),decreasing = T)[1:3]
-```
-
-From the summary you also know that since 2010, you can expect at least 43 crimes per day, or that the mean number of crimes per day is 126. Let's see a distribution per year:
-
-```{r, eval=TRUE}
-tapply(crimeTotalCountsDay$counts,
-       year(crimeTotalCountsDay$date), FUN=summary)
-```
-
-If you need to plot this information, we need to add the column with year to the frequency table *crimeTotalCountsDay*:
-
-```{r, eval=TRUE}
-crimeTotalCountsDay$year=year(crimeTotalCountsDay$date)
-#you have
-head(crimeTotalCountsDay,15)
-```
-
-Now, you can plot by year:
-
-```{r}
-base = ggplot(crimeTotalCountsDay,
-       aes(x = counts)) 
-HistSimple=base + geom_histogram(fill='grey', color=NA) 
-HistFacet=HistSimple+ facet_wrap(~year(crimeTotalCountsDay$date),
-                                ncol = 1, #all in one column
-                                strip.position = 'right')#,#year
-HistFacet
-```
-
-In general, it would look better if we use densities:
-
-```{r, eval=TRUE}
-base = ggplot(crimeTotalCountsDay,
-       aes(x = counts)) + theme_classic()
-densePlot=base + geom_density(fill='grey', color=NA) 
-denseFacet=densePlot+ facet_wrap(~year(crimeTotalCountsDay$date),
-                                ncol = 1, #all in one column
-                                strip.position = 'right')#,#year
-denseFacet
-
-```
-
-You can improve this with:
-
-```{r, eval=TRUE}
-densePlot + 
-        # reduce space between density plot
-  theme(panel.spacing.y = unit(0.1, "lines"),
-        # no title on y
-        axis.title.y = element_blank(),
-        # no text on y
-        axis.text.y = element_blank(),
-        # no line on y
-        axis.line.y = element_blank(),
-        # no ticks on y
-        axis.ticks.y = element_blank(),
-        # the border and background of each year in facet:
-        strip.background = element_rect(colour="white"),
-        # the text of each year in facet
-        strip.text.y = element_text(size=12,
-                                    color="grey",
-                                    angle = 0))
-```
-
-We can also use similar plots to the ones used in the previous material (cat-num). Let's keep duration longer than a year, and after 2000:
-
-```{r filterexploreBOX2, eval=TRUE}
-# new filtered data frame
-crimeY2000=crime_nona[crime_nona$year>=2000 & crime_nona$DaysToReport>=365,]
-
-# create new variable in YEARS:
-crimeY2000$YearsToReport=crimeY2000$DaysToReport/365
-```
-
-```{r, eval=TRUE}
-#boxplot by Year
-base=ggplot(data = crimeY2000,
-            aes(x=as.factor(year),
-                y=YearsToReport)) # is not ONE value
-boxByYear=base + geom_boxplot()
-
-boxByYear
-```
-
-
-Remember that although the boxplot is very informative, I recommend the use of familiar  statistics :
-
-
-```{r, eval=TRUE}
-# vector of colors named as stats:
-myFunCols=c(Max='black',Median='purple',Min='blue')
-
-# plotting
-baseINV=ggplot(crimeY2000, aes(x=as.factor(year),
-                             y=YearsToReport)) +
-        theme_classic()
-# points with AESthetics:
-MAXs=baseINV + stat_summary(fun = max, geom = "point", 
-                            aes(color='Max'))
- 
-MAXMINs=MAXs + stat_summary(fun = min, geom = "point", 
-                            aes(color='Min'))
-
-MxMnMDs=MAXMINs+ stat_summary(fun = median, geom = "point", 
-                            aes(color='Median'))
-
-MxMnMDs= MxMnMDs + scale_colour_manual(values=myFunCols,
-                                       name="Stats") 
-MxMnMDs
-```
-
-Notice that if we want to connect the points this may not be what you have in mind:
-
-```{r, eval=TRUE}
-MxMnMDs + geom_line()
-
-```
-
-Remember that _YearsToReport_ is NOT one value, but several. Then, connecting the dots requires to override the grouping of the dots,  so we add **group=1**):
-
-```{r, eval=TRUE}
-MxMnMDsL=MxMnMDs+ geom_line(stat="summary",fun='max',
-                            aes(color="Max"),
-                            group=1) +
-                  geom_line(stat="summary",fun='min',
-                            aes(color="Min"),
-                            group=1) +
-                  geom_line(stat="summary",fun='median',
-                            aes(color="Median"),
-                            group=1) 
-MxMnMDsL + theme(axis.text.x = element_text(angle = 60,
-                                            vjust = 0.5
-                                            ))
-```
-
 ## Numeric-Numeric data
 
 The study of bivariate relationships among numerical variables is known as correlation analysis. The data we have been using has few numerical columns, but we will produce two by aggregating the original data since 2015 by _Neigborhood_:
 
-* Aggregating days to report and neighborhood:
-```{r aggregate2, eval=TRUE}
-crime2015=crime_nona[crime_nona$year>=2015,]
-# 1. MEAN of days it takes to report a crime by neighborhood
-daysByNeigh=aggregate(data=crime2015,DaysToReport~Neighborhood,mean)
-
-# you have:
-head(daysByNeigh)
-```
-
-* Aggregating crimes by neighborhood
-```{r, eval=TRUE}
-# 2. Crimes by neighborhood
-crimesByNeigh=as.data.frame(100*prop.table(table(crime2015$Neighborhood)))
-names(crimesByNeigh)=c('Neighborhood', 'CrimeShare')
-head(crimesByNeigh)
-```
-
-
-Since both data frames have the same neighboorhood, we can make one data frame by merging both:
-
-```{r mergeDFS, eval=TRUE}
-num_num=merge(daysByNeigh,crimesByNeigh,by='Neighborhood')
-str(num_num)
-```
-Let's turn the _Neighborhood_ into characters:
-```{r, eval=TRUE}
-num_num$Neighborhood=as.character(num_num$Neighborhood)
-```
-
 
 Once we have the data organized, the usual option is the scatterplot:
 
+```{r}
+fremont10<-fremont[1:1000,]
+```
+
+```{r}
+fremontDate=as.data.frame(table(fremont$Date))  # date will be a factor
+head(fremontDate,10)
+```
+```{r}
+names(fremontDate)=c("date",'count')
+#formatting column in Freq Table:
+fremontDate$date=as.Date(fremontDate$date)
+
+head(fremontDate)
+```
+```{r}
+base1=ggplot(fremontDate,
+            aes(x=date,y=count))
+base1  + geom_line(alpha=0.3) 
+```
+```{r}
+#library(lubridate)
+#newDate=date(Date)
+```
+
+
 ```{r scatter, eval=TRUE}
  
-base = ggplot(num_num, aes(x=DaysToReport,y=CrimeShare)) 
+base = ggplot(fremont, aes(x=(Date),y=Fremont.Bridge.Total)) 
 plot1= base +  geom_point() 
 plot1
 ```
 
-If you compute the Pearson correlation coefficient, you may not find a relevant correlation interesting:
-
-```{r, eval=TRUE}
-cor.test(num_num$DaysToReport,num_num$CrimeShare,method = "pearson")
-```
 
 However, you can visually find something relevant. Let's use **ggrepel** to show labels:
-
-```{r ggscatter, eval=TRUE}
-library(ggrepel)
-plot1 + geom_text_repel(aes(label=Neighborhood))
-```
-
-```{r}
-plot1 + geom_text_repel(aes(label=Neighborhood),size=2,
-                        min.segment.length = 0,
-                        max.overlaps = 100)
-```
 
 
 Now we can limit the labels, annotating the ones that represent at least 5% of the crimes in the city:
 
 ```{r, eval=TRUE}
-plot1 + geom_text_repel(aes(label=ifelse(CrimeShare>=5,Neighborhood, "")),size=2,
+library(ggrepel)
+plot1 + geom_text_repel(aes(label=ifelse(Fremont.Bridge.Total>=500,Fremont.Bridge.Total, "")),size=2,
                         min.segment.length = 0,
                         max.overlaps = 100)
 ```
-
-Or the ones that take longer than a week to report:
-
-```{r, eval=TRUE}
-plot1 + geom_text_repel(aes(label=ifelse(DaysToReport>7,Neighborhood, "")),
-                        size=2,
+```{r}
+library(ggrepel)
+plot1 + geom_text_repel(aes(label=ifelse(Fremont.Bridge.Total>=500,Fremont.Bridge.Total, "")),size=2,
                         min.segment.length = 0,
                         max.overlaps = 100)
 ```
-
 
 Besides conditionally annotating the places, you can identify the area of the most salient behavior. Let's highlight overlaping points:
 
 ```{r hexbins, eval=TRUE}
+install.packages(hexbin)
 library(hexbin)
 heat = base +  geom_hex(bins = 10) + 
                scale_fill_distiller(palette ="Greys",
@@ -895,7 +100,7 @@ heat2
 Now you have an approximate of the places representing the most common behavior:
 ```{r}
 heat2 + theme_light() + 
-    geom_text_repel(aes(label=Neighborhood),size=2,color='black',
+    geom_text_repel(aes(label=),size=2,color='black',
                         fontface='bold',
                         min.segment.length = 0,
                         max.overlaps = 100) +  
@@ -927,5 +132,4 @@ heat2 + theme_light() +
     scale_y_continuous(expand = c(0, 0),limits = c(0.5,3))
 ```
 
-Some of these plot work better when in interactive mode.
 
