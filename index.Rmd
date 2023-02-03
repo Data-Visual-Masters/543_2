@@ -1,7 +1,8 @@
 ```{r}
+#install.packages("tidyverse")
 library(ggplot2)
+library(lubridate)
 ```
-
 
 ```{r collect, eval=TRUE}
 # clear memory
@@ -18,118 +19,74 @@ Let's see what kind of data we have in **crime** data table:
 # categorical? numerical?
 str(fremont,width = 50,strict.width='cut')
 ```
-## Numeric-Numeric data
-
-The study of bivariate relationships among numerical variables is known as correlation analysis. The data we have been using has few numerical columns, but we will produce two by aggregating the original data since 2015 by _Neigborhood_:
-
-
-Once we have the data organized, the usual option is the scatterplot:
-
 ```{r}
-fremont10<-fremont[1:1000,]
+fremont$Date=as.Date(fremont$Date,format = "%m/%d/%Y")
 ```
 
 ```{r}
-fremontDate=as.data.frame(table(fremont$Date))  # date will be a factor
-head(fremontDate,10)
+fremont$Fremont.Bridge.Total=as.numeric(fremont$Fremont.Bridge.Total)
 ```
+
 ```{r}
-names(fremontDate)=c("date",'count')
-#formatting column in Freq Table:
-fremontDate$date=as.Date(fremontDate$date)
-
-head(fremontDate)
+aggregate(data=fremont,Fremont.Bridge.Total~Date,FUN =sum )
 ```
+
 ```{r}
-base1=ggplot(fremontDate,
-            aes(x=date,y=count))
-base1  + geom_line(alpha=0.3) 
+base=ggplot(fremont,
+            aes(x=Date,y=Fremont.Bridge.Total))
+base  + geom_line(alpha=0.3) 
 ```
-```{r}
-#library(lubridate)
-#newDate=date(Date)
-```
-
-
-```{r scatter, eval=TRUE}
- 
-base = ggplot(fremont, aes(x=(Date),y=Fremont.Bridge.Total)) 
-plot1= base +  geom_point() 
-plot1
-```
-
-
-However, you can visually find something relevant. Let's use **ggrepel** to show labels:
-
-
-Now we can limit the labels, annotating the ones that represent at least 5% of the crimes in the city:
 
 ```{r, eval=TRUE}
+start <- as.Date("2020-1-1")
+end <- NA
+base=ggplot(fremont,
+            aes(x=Date,y=Fremont.Bridge.Total))
+base  + geom_line(alpha=0.3) + scale_x_date(limits = c(start, end)) 
+```
+
+
+```{r, eval=TRUE}
+base=ggplot(fremont,
+            aes(x=floor_date(Date, "month"),
+                y=Fremont.Bridge.Total))
+monthly= base  + geom_line(alpha=0.3) 
+monthly= monthly + scale_x_date(limits = c(start, end))
+monthly
+```
+
+
+```{r, eval=TRUE}
+base=ggplot(fremont,
+            aes(x=Date,
+                y=Fremont.Bridge.Total))
+monthly= base  + geom_line(alpha=0.3) 
+monthly= monthly + scale_x_date(limits = c(start, end))
+# adding a trend:
+monthly = monthly + stat_smooth(color = "red",
+                      method = "loess")
+#monthly + facet_wrap(~crime)
+monthly
+```
+
+```{r ggscatter, eval=TRUE}
 library(ggrepel)
-plot1 + geom_text_repel(aes(label=ifelse(Fremont.Bridge.Total>=500,Fremont.Bridge.Total, "")),size=2,
+monthly + geom_text_repel(aes(label=Fremont.Bridge.Total))
+```
+
+```{r}
+monthly + geom_text_repel(aes(label=Fremont.Bridge.Total),size=2,
                         min.segment.length = 0,
                         max.overlaps = 100)
 ```
-```{r}
-library(ggrepel)
-plot1 + geom_text_repel(aes(label=ifelse(Fremont.Bridge.Total>=500,Fremont.Bridge.Total, "")),size=2,
+
+
+Now we can limit the labels
+
+```{r, eval=TRUE}
+monthly + geom_text_repel(aes(label=ifelse(Fremont.Bridge.Total>=700,Fremont.Bridge.Total, "")),size=2,
                         min.segment.length = 0,
                         max.overlaps = 100)
-```
-
-Besides conditionally annotating the places, you can identify the area of the most salient behavior. Let's highlight overlaping points:
-
-```{r hexbins, eval=TRUE}
-install.packages(hexbin)
-library(hexbin)
-heat = base +  geom_hex(bins = 10) + 
-               scale_fill_distiller(palette ="Greys",
-                                    direction=1) 
-heat
-```
-
-The palettes can be selected from the [brewer colors website](http://colorbrewer2.org). Using the same palette as before, we can try a different plot (stat_density_2d):
-
-```{r density,eval=TRUE}
-heat2 = base +  stat_density_2d(aes(fill = ..density..), 
-                                 geom = "raster", contour = FALSE) + scale_fill_distiller(palette="Reds", direction=1) 
-heat2
-```
-
-
-Now you have an approximate of the places representing the most common behavior:
-```{r}
-heat2 + theme_light() + 
-    geom_text_repel(aes(label=),size=2,color='black',
-                        fontface='bold',
-                        min.segment.length = 0,
-                        max.overlaps = 100) +  
-    scale_x_continuous(expand = c(0, 0),limits = c(2,5)) + 
-    scale_y_continuous(expand = c(0, 0),limits = c(0.5,3)) 
-```
-
-You can use **geom_label_repel** in some cases (but in this case might not work well).
-
-```{r}
-heat2 + theme_light() + 
-    geom_label_repel(aes(label=Neighborhood),size=2,color='black',
-                        fontface='bold',
-                        min.segment.length = 0,
-                        max.overlaps = 100) +  
-    scale_x_continuous(expand = c(0, 0),limits = c(2,5)) + 
-    scale_y_continuous(expand = c(0, 0),limits = c(0.5,3))
-```
-
-Sometimes increasing the size helps:
-
-```{r, fig.width=10}
-heat2 + theme_light() + 
-    geom_label_repel(aes(label=Neighborhood),size=2,color='black',
-                        fontface='bold',
-                        min.segment.length = 0,
-                        max.overlaps = 100) +  
-    scale_x_continuous(expand = c(0, 0),limits = c(2,5)) + 
-    scale_y_continuous(expand = c(0, 0),limits = c(0.5,3))
 ```
 
 
