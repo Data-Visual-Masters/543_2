@@ -91,6 +91,7 @@ monthly + geom_text_repel(aes(label=ifelse(Fremont.Bridge.Total>=700,Fremont.Bri
 ```
 
 ```{r}
+#Referenced monthly as base plot, but lost annotations here from last line of code
 monthly
 ```
 
