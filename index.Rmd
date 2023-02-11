@@ -13,7 +13,7 @@ fremont=read.csv(link)
 ```
 
 
-Let's see what kind of data we have in **crime** data table:
+Let's see what kind of data we have in our data table:
 
 ```{r str, eval=TRUE}
 # categorical? numerical?
@@ -26,6 +26,7 @@ fremont$Date=as.Date(fremont$Date,format = "%m/%d/%Y")
 ```{r}
 fremont$Fremont.Bridge.Total=as.numeric(fremont$Fremont.Bridge.Total)
 ```
+
 
 ```{r}
 aggregate(data=fremont,Fremont.Bridge.Total~Date,FUN =sum )
@@ -89,4 +90,45 @@ monthly + geom_text_repel(aes(label=ifelse(Fremont.Bridge.Total>=700,Fremont.Bri
                         max.overlaps = 100)
 ```
 
+```{r}
+monthly
+```
+
+```{r}
+# Defining the title
+the_Title="Frequency of Bike Use on Fremont Bridge"
+the_Subtitle="Jan 2020 - Dec 2022"
+# Adding the titles
+monthly2= monthly + ggtitle (label = the_Title,
+                             subtitle = the_Subtitle)
+# Run plot again
+monthly2
+```
+
+```{r}
+# Axes titles to be used
+horizontalTitle = "Date"
+verticalTitle = "Number of Bike Trips"
+# Adding the titles to the axes
+monthly3 = monthly2 +xlab(horizontalTitle) + ylab (verticalTitle)
+# Run plot again
+monthly3
+
+```
+
+```{r}
+# Adding the data source
+theSource = "Source: Seattle Open Data Portal (City of Seattle, 2022)"
+# Adding the source
+monthly4 = monthly3 + labs(caption = theSource)
+# Run the plot
+monthly4
+```
+
+```{r}
+# Getting rid of background
+monthly5 = monthly4 + theme_classic()
+# Run plot
+monthly5
+```
 
