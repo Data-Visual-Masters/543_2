@@ -25,10 +25,12 @@ Let's see what kind of data we have in our data table:
 str(fremont,width = 50,strict.width='cut')
 ```
 ```{r}
+#sets our date variable format as m/d/y
 fremont$Date=as.Date(fremont$Date,format = "%m/%d/%Y")
 ```
 
 ```{r}
+#sets our bridge count variable to numeric
 fremont$Fremont.Bridge.Total=as.numeric(fremont$Fremont.Bridge.Total)
 ```
 
@@ -38,12 +40,14 @@ aggregate(data=fremont,Fremont.Bridge.Total~Date,FUN =sum )
 ```
 
 ```{r}
+#produces base line graph with transparency
 base=ggplot(fremont,
             aes(x=Date,y=Fremont.Bridge.Total))
 base  + geom_line(alpha=0.3) 
 ```
 
 ```{r, eval=TRUE}
+#limits x axis to 2020 and beyond
 start <- as.Date("2020-1-1")
 end <- NA
 base=ggplot(fremont,
@@ -63,6 +67,7 @@ monthly
 
 
 ```{r, eval=TRUE}
+#attempt at analyzing monthly data
 base=ggplot(fremont,
             aes(x=Date,
                 y=Fremont.Bridge.Total))
