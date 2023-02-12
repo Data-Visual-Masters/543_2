@@ -1,3 +1,8 @@
+---
+title: "Deliverable 2: Bivariate Plot"
+output: html_notebook
+
+
 ```{r}
 #install.packages("tidyverse")
 library(ggplot2)
