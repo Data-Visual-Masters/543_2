@@ -1,12 +1,8 @@
----
-title: "Deliverable 2: Bivariate Plot"
-output: html_notebook
-
-
 ```{r}
 #install.packages("tidyverse")
 library(ggplot2)
 library(lubridate)
+library(ggrepel)
 ```
 
 ```{r collect, eval=TRUE}
@@ -80,37 +76,25 @@ monthly = monthly + stat_smooth(color = "red",
 monthly
 ```
 
-```{r ggscatter, eval=TRUE}
-library(ggrepel)
-monthly + geom_text_repel(aes(label=Fremont.Bridge.Total))
-```
-
-```{r}
-monthly + geom_text_repel(aes(label=Fremont.Bridge.Total),size=2,
-                        min.segment.length = 0,
-                        max.overlaps = 100)
-```
-
-
-Now we can limit the labels
+use ggrepel package to show labels, limiting the labels to only the highest values
 
 ```{r, eval=TRUE}
-monthly + geom_text_repel(aes(label=ifelse(Fremont.Bridge.Total>=700,Fremont.Bridge.Total, "")),size=2,
+monthlylabel = monthly + geom_text_repel(aes(label=ifelse(Fremont.Bridge.Total>=700,Fremont.Bridge.Total, "")),size=2,
                         min.segment.length = 0,
                         max.overlaps = 100)
 ```
 
 ```{r}
-#Referenced monthly as base plot, but lost annotations here from last line of code
-monthly
+#Referenced monthlylabel as base plot
+monthlylabel
 ```
 
 ```{r}
 # Defining the title
 the_Title="Frequency of Bike Use on Fremont Bridge"
-the_Subtitle="Jan 2020 - Dec 2022"
+the_Subtitle="Jan 2020 - Sept 2022"
 # Adding the titles
-monthly2= monthly + ggtitle (label = the_Title,
+monthly2= monthlylabel + ggtitle (label = the_Title,
                              subtitle = the_Subtitle)
 # Run plot again
 monthly2
